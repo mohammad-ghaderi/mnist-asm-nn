@@ -1,3 +1,4 @@
+global dot_product
 ; Computes z = Σ (W * x) + b
 ; rdi = pointer to input vector x
 ; rsi = pointer to weights row W[j]
@@ -17,3 +18,4 @@ dot_product:
     jl .dp_loop
     addsd xmm0, [rdx]       ; add bias
     ret
+
