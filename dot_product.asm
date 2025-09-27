@@ -9,7 +9,8 @@ dot_product:
     xor rax, rax           ; index = 0
     pxor xmm0, xmm0        ; accumulator = 0.0
 .dp_loop:
-    movsd xmm1, [rdi + rax*8] ; x[i]
+    movzx r11, byte [rdi + rax]  ; unsigned byte x[i]
+    cvtsi2sd xmm1, r11            ; convert integer to double
     movsd xmm2, [rsi + rax*8] ; W[j][i]
     mulsd xmm1, xmm2
     addsd xmm0, xmm1
