@@ -27,6 +27,10 @@ layer_forward:
     ; output pointer = out + r10*8
     lea r13, [r8 + rax]
 
+    push rsi
+    push rdx
+    push rcx
+
     ; call dot_product
     mov rdi, rdi     ; x
     mov rsi, r11     ; W_row
@@ -38,6 +42,10 @@ layer_forward:
     call relu
 
     movsd [r13], xmm0
+
+    pop rcx
+    pop rdx
+    pop rsi
 
     inc r10
     cmp r10, rcx
