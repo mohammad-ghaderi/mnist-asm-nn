@@ -58,6 +58,12 @@ _start:
     mov rcx, 10
     call softmax
 
+    ; Loss = -log(p[label])
+    movzx rdi, byte [rel label]
+    movsd xmm0, [o + rdi*8]
+    call neg_log
+    movsd [losses + rbx*8], xmm0
+
     ; Next sample
     inc rbx
     cmp rbx, BATCH_SIZE
