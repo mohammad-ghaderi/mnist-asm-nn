@@ -52,6 +52,12 @@ _start:
     mov r14, 0
     call layer_forward
 
+    ; Softmax
+    lea rdi, [rel o]
+    lea rsi, [rel o]
+    mov rcx, 10
+    call softmax
+
     ; Next sample
     inc rbx
     cmp rbx, BATCH_SIZE
