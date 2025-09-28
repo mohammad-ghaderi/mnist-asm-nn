@@ -1,5 +1,5 @@
 global layer_forward
-extern dot_product
+extern dot_product_f64, dot_product_u8
 extern relu
 
 section .text
@@ -10,6 +10,7 @@ section .text
 ; r8  = pointer to output buffer
 ; rcx = num_neurons
 ; r9  = input_size
+; r14 = 1 if it is first layer else 1 -> flag (1 = use dot_product_u8, 0 = use dot_product_f64)
 layer_forward:
     xor r10, r10              ; neuron index
 .layer_loop:
@@ -30,19 +31,28 @@ layer_forward:
     push rsi
     push rdx
     push rcx
+    push r14
 
     ; call dot_product
     mov rdi, rdi     ; x
     mov rsi, r11     ; W_row
     mov rcx, r9      ; input_size
     mov rdx, r12     ; bias
-    call dot_product
+
+    cmp r14, 0
+    je .use_f64
+    call dot_product_u8
+    jmp .after_dp
+.use_f64:
+    call dot_product_f64
+.after_dp:
 
     ; apply relu
     call relu
 
     movsd [r13], xmm0
 
+    pop r14
     pop rcx
     pop rdx
     pop rsi

@@ -31,6 +31,7 @@ _start:
     lea r8,  [rel h1]
     mov rcx, 128
     mov r9, 784
+    mov r14, 1
     call layer_forward
 
     lea rdi, [rel h1]
@@ -39,6 +40,7 @@ _start:
     lea r8,  [rel h2]
     mov rcx, 64
     mov r9, 128
+    mov r14, 0
     call layer_forward
 
     lea rdi, [rel h2]
@@ -47,6 +49,7 @@ _start:
     lea r8,  [rel o]
     mov rcx, 10
     mov r9, 64
+    mov r14, 0
     call layer_forward
 
     ; Next sample
