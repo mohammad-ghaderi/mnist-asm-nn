@@ -16,6 +16,8 @@ _start:
     
 .batch_loop:
     ; load image and label
+    push rbx
+
     mov rsi, rbx              ; index
     lea rdi, [rel img]        ; buffer for image
     call load_mnist_image
@@ -62,12 +64,29 @@ _start:
     movzx rdi, byte [rel label]
     movsd xmm0, [o + rdi*8]
     call neg_log
+    pop rbx
     movsd [losses + rbx*8], xmm0
 
     ; Next sample
     inc rbx
     cmp rbx, BATCH_SIZE
     jl .batch_loop
+
+    ; Average loss
+    pxor xmm1, xmm1
+    xor rbx, rbx
+.sum_loop:
+    addsd xmm1, [losses + rbx*8]
+    inc rbx
+    cmp rbx, BATCH_SIZE
+    jl .sum_loop
+
+    mov rax, BATCH_SIZE
+    cvtsi2sd xmm0, rax
+    divsd xmm1, xmm0           ; avg loss in xmm1
+    movapd xmm0, xmm1
+
+    ; later i would add backpropation here :)
 
     ; exit
     mov rax, 60
