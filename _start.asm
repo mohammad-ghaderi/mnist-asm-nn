@@ -4,15 +4,24 @@ extern layer_forward, softmax, neg_log
 extern img, label
 extern W1, b1, W2, b2, W3, b3
 extern z1, h1, z2, h2, o
+extern dW1, dbias1, dW2, dbias2, dW3, dbias3
+extern grad_z1, grad_h1, grad_z2, grad_h2, grad_o
+extern accumulate_gradients
+
 
 BATCH_SIZE equ 64
+EPOCHS equ 10
 
 section .bss
 losses resq BATCH_SIZE      ; store per-sample losses
 
 section .text
 _start:
+    mov r15, EPOCHS         ; number of epochs
+    
+.epoch_loop:
     xor rbx, rbx              ; sample index = 0
+    push r15
     
 .batch_loop:
     ; load image and label
@@ -67,12 +76,16 @@ _start:
     pop rbx
     movsd [losses + rbx*8], xmm0
 
+    call accumulate_gradients  ; Accumulate gradients for this sample
+
     ; Next sample
     inc rbx
     cmp rbx, BATCH_SIZE
     jl .batch_loop
 
-    ; Average loss
+    ; end of BATCH
+
+    ; Average loss for batch
     pxor xmm1, xmm1
     xor rbx, rbx
 .sum_loop:
@@ -86,7 +99,10 @@ _start:
     divsd xmm1, xmm0           ; avg loss in xmm1
     movapd xmm0, xmm1
 
-    ; later i would add backpropation here :)
+    ; next epoch
+    pop r15
+    dec r15
+    jnz .epoch_loop
 
     ; exit
     mov rax, 60
