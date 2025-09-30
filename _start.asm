@@ -21,6 +21,7 @@ _start:
     
 .epoch_loop:
     xor rbx, rbx              ; sample index = 0
+    call clear_gradients      ; clear gradients at start of epoch
     push r15
     
 .batch_loop:
@@ -48,7 +49,6 @@ _start:
     lea r8,  [rel h2]
     mov rcx, 64
     mov r9, 128
-    mov r14, 0
     call layer_forward
 
     lea rdi, [rel h2]
@@ -57,7 +57,6 @@ _start:
     lea r8,  [rel o]
     mov rcx, 10
     mov r9, 64
-    mov r14, 0
     call layer_forward
 
     ; Softmax
@@ -95,6 +94,9 @@ _start:
     cvtsi2sd xmm0, rax
     divsd xmm1, xmm0           ; avg loss in xmm1
     movapd xmm0, xmm1
+
+    ; update weights with averaged gradients
+    call update_weights
 
     ; next epoch
     pop r15

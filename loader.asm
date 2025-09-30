@@ -2,6 +2,7 @@ global load_mnist_image
 global load_mnist_label
 
 extern img
+extern img_double
 extern label
 
 section .text
