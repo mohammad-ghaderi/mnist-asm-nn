@@ -1,5 +1,5 @@
 global accumulate_gradients, relu_backward, softmax_cross_entropy_backward
-extern img, label, h1, h2, o, z1, z2
+extern img_double, label, h1, h2, o, z1, z2
 extern W1, W2, W3
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_h1, grad_h2, grad_o
@@ -96,7 +96,7 @@ accumulate_gradients:
     ; we store grade_z1 in grade_h1 for memory efficiency, because we don't need grade_h1 anymore
 
     ; dW1 += input^T * grad_z1 
-    lea rdi, [rel img]        ; input image -------------------------------------here is a problem img is unsigned byte not double------------------------------------
+    lea rdi, [rel img_double]        ; input image
     lea rsi, [rel grad_h1]    ; gradient (now grad_z1)
     lea rdx, [rel dW1]        ; gradient for W1
     mov rcx, 128              ; output size

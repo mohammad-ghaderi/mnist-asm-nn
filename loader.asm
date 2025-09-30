@@ -6,13 +6,12 @@ extern label
 
 section .text
 
-; rdi = pointer to image buffer
 ; rsi = image index (0-based)
 load_mnist_image:
     push rbp
-    mov rbp, rsp
     push r12
     push r13
+    mov rbp, rsp
 
     mov r12, rsi
 
@@ -53,7 +52,6 @@ load_mnist_image:
     pop rbp
     ret
 
-; rdi = pointer to label buffer
 ; rsi = label index (0-based)
 load_mnist_label:
     ; open labels file
