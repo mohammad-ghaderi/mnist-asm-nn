@@ -55,16 +55,23 @@ load_mnist_image:
 
 ; rsi = label index (0-based)
 load_mnist_label:
+    push rbp
+    mov rbp, rsp
+    
+    ; Save the index
+    mov r12, rsi
+    
     ; open labels file
     mov rax, 2
     mov rdi, label_file
     mov rsi, 0
     syscall
     mov rbx, rax
-    ; skip header (8 bytes)
-    mov rax, 8
+    
+    ; Calculate file position: index + 8 (header)
+    mov rax, 8        ; lseek
     mov rdi, rbx
-    mov rsi, rsi      ; label index
+    mov rsi, r12      ; use saved index
     add rsi, 8        ; skip 8-byte header
     mov rdx, 0
     syscall
@@ -80,6 +87,8 @@ load_mnist_label:
     mov rax, 3
     mov rdi, rbx
     syscall
+    
+    pop rbp
     ret
 
 convert_img_to_double:
