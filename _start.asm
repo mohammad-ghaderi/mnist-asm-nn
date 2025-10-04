@@ -7,10 +7,13 @@ extern z1, h1, z2, h2, o
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_z1, grad_h1, grad_z2, grad_h2, grad_o
 extern accumulate_gradients, update_weights, clear_gradients
+extern print_loss
 
 
 BATCH_SIZE equ 64
 EPOCHS equ 10
+TOTAL_SAMPLES equ 60000
+BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
 
 section .bss
 losses resq BATCH_SIZE      ; store per-sample losses
@@ -18,20 +21,34 @@ losses resq BATCH_SIZE      ; store per-sample losses
 section .text
 _start:
     mov r15, EPOCHS         ; number of epochs
-    
+
 .epoch_loop:
-    xor rbx, rbx              ; sample index = 0
-    call clear_gradients      ; clear gradients at start of epoch
     push r15
+    xor r14, r14            ; batch index = 0
     
 .batch_loop:
+    push r14
+    xor rbx, rbx              ; sample index = 0
+
+    ; Calculate global sample index: (batch_index * BATCH_SIZE)
+    mov rax, r14
+    imul rax, BATCH_SIZE
+    mov r13, rax            ; r13 = base index for this batch
+    
+.sample_loop:
     ; load image and label
     push rbx
+    push r13
 
-    mov rsi, rbx              ; index
+    ; Calculate actual sample index: base_index + sample_index
+    mov rax, r13
+    add rax, rbx
+    mov rsi, rax            ; global sample index
     call load_mnist_image
 
-    mov rsi, rbx              ; index
+    mov rax, r13
+    add rax, rbx
+    mov rsi, rax            ; global sample index  
     call load_mnist_label
 
     ; Forward pass
@@ -69,7 +86,10 @@ _start:
     movzx rdi, byte [rel label]
     movsd xmm0, [o + rdi*8]
     call neg_log
+    
+    pop r13
     pop rbx
+
     movsd [losses + rbx*8], xmm0
 
     call accumulate_gradients  ; gradients for this sample
@@ -77,9 +97,9 @@ _start:
     ; Next sample
     inc rbx
     cmp rbx, BATCH_SIZE
-    jl .batch_loop
+    jl .sample_loop
 
-    ; end of BATCH
+    ; end of batch
 
     ; Average loss for batch
     pxor xmm1, xmm1
@@ -95,8 +115,17 @@ _start:
     divsd xmm1, xmm0           ; avg loss in xmm1
     movapd xmm0, xmm1
 
+    call print_loss
+
     ; update weights with averaged gradients
     call update_weights
+    call clear_gradients      ; clear for next batch
+
+    ; Next batch
+    pop r14
+    inc r14
+    cmp r14, BATCHES_PER_EPOCH
+    jl .batch_loop
 
     ; next epoch
     pop r15
