@@ -46,6 +46,11 @@ _start:
     mov rsi, rax            ; global sample index
     call load_mnist_image
 
+    pop r13
+    pop rbx
+    push rbx
+    push r13
+
     mov rax, r13
     add rax, rbx
     mov rsi, rax            ; global sample index  
