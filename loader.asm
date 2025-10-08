@@ -99,10 +99,16 @@ convert_img_to_double:
     push rbp
     mov rbp, rsp
     xor rax, rax
+
+    ; Load 255.0 constant for division
+    mov r9, __float64__(255.0)
+    movq xmm1, r9
+    
     
 .convert_loop:
     movzx r8, byte [rdi + rax]    ; load unsigned byte
     cvtsi2sd xmm0, r8             ; convert to double
+    divsd xmm0, xmm1              ; divide by 255.0 to normalize
     movsd [rsi + rax*8], xmm0     ; store as double
     inc rax
     cmp rax, rcx
