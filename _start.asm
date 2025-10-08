@@ -65,6 +65,7 @@ _start:
     mov r9, 784
     push 1                     ; use_relu = true
     call layer_forward
+    pop rdx ; just for poping the value 1 
 
     lea rdi, [rel h1]
     lea rsi, [rel W2]
@@ -74,6 +75,7 @@ _start:
     mov r9, 128
     push 1                     ; use_relu = true
     call layer_forward
+    pop rdx ; just for poping the value 1 
 
     lea rdi, [rel h2]
     lea rsi, [rel W3]
@@ -83,6 +85,7 @@ _start:
     mov r9, 64
     push 0                     ; use_relu = false
     call layer_forward
+    pop rdx ; just for poping the value 0
 
     ; Softmax
     lea rdi, [rel o]
