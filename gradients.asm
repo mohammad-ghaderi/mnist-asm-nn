@@ -41,8 +41,62 @@ update_weights:
     cmp rax, rcx
     jl .update_b3_loop
     
-    ; Repeat for W2, b2, W1, b1 with the same averaging...
-    ; (similar pattern for other layers)
+    ; Average gradients and update W2 (128*64)
+    mov rcx, 128*64
+    xor rax, rax
+.update_w2_loop:
+    movsd xmm0, [W2 + rax*8]    ; current weight
+    movsd xmm1, [dW2 + rax*8]   ; accumulated gradient
+    mulsd xmm1, [batch_size_inv] ; average the gradient
+    mulsd xmm1, [learning_rate]  ; scale by learning rate
+    subsd xmm0, xmm1            ; weight -= lr * (avg_gradient)
+    movsd [W2 + rax*8], xmm0
+    inc rax
+    cmp rax, rcx
+    jl .update_w2_loop
+    
+    ; Average gradients and update b3 (64)
+    mov rcx, 64
+    xor rax, rax
+.update_b2_loop:
+    movsd xmm0, [b2 + rax*8]
+    movsd xmm1, [dbias2 + rax*8]
+    mulsd xmm1, [batch_size_inv] ; average the gradient
+    mulsd xmm1, [learning_rate]
+    subsd xmm0, xmm1
+    movsd [b2 + rax*8], xmm0
+    inc rax
+    cmp rax, rcx
+    jl .update_b2_loop
+
+    ; Average gradients and update W1 (784*128)
+    mov rcx, 784*128
+    xor rax, rax
+.update_w1_loop:
+    movsd xmm0, [W1 + rax*8]    ; current weight
+    movsd xmm1, [dW1 + rax*8]   ; accumulated gradient
+    mulsd xmm1, [batch_size_inv] ; average the gradient
+    mulsd xmm1, [learning_rate]  ; scale by learning rate
+    subsd xmm0, xmm1            ; weight -= lr * (avg_gradient)
+    movsd [W1 + rax*8], xmm0
+    inc rax
+    cmp rax, rcx
+    jl .update_w1_loop
+    
+    ; Average gradients and update b3 (128)
+    mov rcx, 128
+    xor rax, rax
+.update_b1_loop:
+    movsd xmm0, [b3 + rax*8]
+    movsd xmm1, [dbias1 + rax*8]
+    mulsd xmm1, [batch_size_inv] ; average the gradient
+    mulsd xmm1, [learning_rate]
+    subsd xmm0, xmm1
+    movsd [b1 + rax*8], xmm0
+    inc rax
+    cmp rax, rcx
+    jl .update_b1_loop
+    
     
     pop rbp
     ret
