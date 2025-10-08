@@ -63,6 +63,7 @@ _start:
     lea r8,  [rel h1]
     mov rcx, 128
     mov r9, 784
+    push 1                     ; use_relu = true
     call layer_forward
 
     lea rdi, [rel h1]
@@ -71,6 +72,7 @@ _start:
     lea r8,  [rel h2]
     mov rcx, 64
     mov r9, 128
+    push 1                     ; use_relu = true
     call layer_forward
 
     lea rdi, [rel h2]
@@ -79,6 +81,7 @@ _start:
     lea r8,  [rel o]
     mov rcx, 10
     mov r9, 64
+    push 0                     ; use_relu = false
     call layer_forward
 
     ; Softmax
