@@ -87,7 +87,7 @@ update_weights:
     mov rcx, 128
     xor rax, rax
 .update_b1_loop:
-    movsd xmm0, [b3 + rax*8]
+    movsd xmm0, [b1 + rax*8]
     movsd xmm1, [dbias1 + rax*8]
     mulsd xmm1, [batch_size_inv] ; average the gradient
     mulsd xmm1, [learning_rate]
