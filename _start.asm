@@ -7,7 +7,7 @@ extern z1, h1, z2, h2, o
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_z1, grad_h1, grad_z2, grad_h2, grad_o
 extern accumulate_gradients, update_weights, clear_gradients
-extern print_loss, print_epoch
+extern print_loss, print_epoch, print_accuracy
 extern argmax
 
 
@@ -226,6 +226,7 @@ _start:
     inc r12                      ; correct++
 .no_increment:
     
+    inc rbx
     cmp rbx, TOTAL_SAMPLES
     jne .test_sample_loop
 
@@ -236,8 +237,8 @@ _start:
     cvtsi2sd xmm1, rax
     divsd xmm0, xmm1
 
-    ; print accuracy
-    call print_loss  ; this just print the value in xmm0, i reuse it for printing accuracy :)
+
+    call print_accuracy ; print the accuracy saved in xmm0
 
     ; exit
     mov rax, 60

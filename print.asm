@@ -1,13 +1,14 @@
 section .data
     newline db 10
     epoch_text db "Epoch: ", 0
+    accuracy_text db "Accuracy is: ", 0
 
 section .bss
     buffer resb 32
     epoch_buffer resb 16
 
 section .text
-global print_loss, print_epoch
+global print_loss, print_epoch, print_accuracy
 
 print_loss:
     push rbp
@@ -76,6 +77,40 @@ print_epoch:
     mov rdx, 1
     syscall
     
+    pop rbp
+    ret
+
+; the value is in xmm0 and i use reuse print loss for printing the value :)
+print_accuracy:
+    push rbp
+    
+    sub rsp, 8           ; allocate 8 bytes for double
+    movsd [rsp], xmm0    ; store xmm0
+
+    mov rbp, rsp
+
+    ; compute string length
+    lea rsi, [rel accuracy_text]
+    xor rax, rax
+.count:
+    cmp byte [rsi + rax], 0
+    je .len_done
+    inc rax
+    jmp .count
+.len_done:
+
+    ; write to stdout
+    mov rdx, rax        ; length
+    mov rsi, accuracy_text
+    mov rax, 1          ; sys_write
+    mov rdi, 1          ; stdout
+    syscall
+    
+    movsd xmm0, [rsp]    ; restore xmm0
+    add rsp, 8
+
+    call print_loss
+
     pop rbp
     ret
 
