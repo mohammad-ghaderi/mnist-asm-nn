@@ -153,8 +153,9 @@ _start:
 
     ; test the model on the test data
     xor rbx, rbx ; sample index for test
-    mov rsi, rbx
 
+.test_sample_loop:    
+    mov rsi, rbx
     push rbx
 
     push 1
@@ -162,10 +163,15 @@ _start:
     add rsp, 8              ; just to pop the pushed 1 from stack
 
     pop rbx
+    push rbx
 
     push 1
     call load_mnist_label
     add rsp, 8              ; just to pop the pushed 1 from stack
+
+    pop rbx
+    cmp rbx, TOTAL_SAMPLES
+    jne .test_sample_loop
 
     ; exit
     mov rax, 60
