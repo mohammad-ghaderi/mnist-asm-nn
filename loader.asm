@@ -9,6 +9,9 @@ section .text
 
 ; rsi = image index (0-based)
 load_mnist_image:
+    push r15                  ; save r15 to use for train-test flag
+    mov r15, [rsp+16]         ; get train-test flag from stack (offset +8 because we pushed r15)
+
     push rbp
     push r12
     push r13
@@ -17,7 +20,15 @@ load_mnist_image:
     mov r12, rsi
 
     mov rax, 2        ; open images file
-    mov rdi, img_file ; address of filename
+    cmp r15, 1
+    je .load_test_data
+    ; load train data
+    mov rdi, img_file ; address of train filename
+    jmp .rest_load_data
+.load_test_data:
+    mov rdi, img_test_file  ; address of test filename
+.rest_load_data:
+
     mov rsi, 0        ; O_RDONLY
     syscall       
     mov rbx, rax      ; fd
@@ -51,10 +62,14 @@ load_mnist_image:
     pop r13
     pop r12
     pop rbp
+    pop r15
     ret
 
 ; rsi = label index (0-based)
 load_mnist_label:
+    push r15                  ; save r15 to use for train-test flag
+    mov r15, [rsp+16]         ; get train-test flag from stack (offset +8 because we pushed r15)
+
     push rbp
     mov rbp, rsp
     
@@ -63,6 +78,15 @@ load_mnist_label:
     
     ; open labels file
     mov rax, 2
+    cmp r15, 1
+    je .load_test_label
+    ; load train label
+    mov rdi, label_file ; address of train label filename
+    jmp .rest_load_label
+.load_test_label:
+    mov rdi, label_test_file  ; address of test label filename
+.rest_load_label:
+
     mov rdi, label_file
     mov rsi, 0
     syscall
@@ -89,6 +113,7 @@ load_mnist_label:
     syscall
     
     pop rbp
+    pop r15
     ret
 
 convert_img_to_double:
@@ -121,3 +146,5 @@ convert_img_to_double:
 section .data
 img_file db "dataset/train-images.idx3-ubyte",0
 label_file db "dataset/train-labels.idx1-ubyte",0
+img_test_file db "dataset/t10k-images.idx3-ubyte",0
+label_test_file db "dataset/t10k-labels.idx1-ubyte",0

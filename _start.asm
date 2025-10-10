@@ -14,6 +14,7 @@ BATCH_SIZE equ 64
 EPOCHS equ 10
 TOTAL_SAMPLES equ 60000
 BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
+TOTAL_SAMPLES_TEST equ 10000
 
 section .bss
 losses resq BATCH_SIZE      ; store per-sample losses
@@ -44,7 +45,9 @@ _start:
     mov rax, r13
     add rax, rbx
     mov rsi, rax            ; global sample index
+    push 0                  ; 0 for train data 1 for test data
     call load_mnist_image
+    add rsp, 8              ; just to pop the pushed 0 from stack
 
     pop r13
     pop rbx
@@ -54,7 +57,9 @@ _start:
     mov rax, r13
     add rax, rbx
     mov rsi, rax            ; global sample index  
+    push 0
     call load_mnist_label
+    add rsp, 8              ; just to pop the pushed 0 from stack
 
     ; Forward pass
     lea rdi, [rel img_double]
@@ -142,6 +147,25 @@ _start:
     pop r15
     dec r15
     jnz .epoch_loop
+
+    ; =========================
+    ;; TEST
+
+    ; test the model on the test data
+    xor rbx, rbx ; sample index for test
+    mov rsi, rbx
+
+    push rbx
+
+    push 1
+    call load_mnist_image
+    add rsp, 8              ; just to pop the pushed 1 from stack
+
+    pop rbx
+
+    push 1
+    call load_mnist_label
+    add rsp, 8              ; just to pop the pushed 1 from stack
 
     ; exit
     mov rax, 60
