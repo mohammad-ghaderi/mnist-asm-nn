@@ -70,7 +70,7 @@ _start:
     mov r9, 784
     push 1                     ; use_relu = true
     call layer_forward
-    pop rdx ; just for poping the value 1 
+    add rsp, 8   ; just for poping the value 1 
 
     lea rdi, [rel h1]
     lea rsi, [rel W2]
@@ -80,7 +80,7 @@ _start:
     mov r9, 128
     push 1                     ; use_relu = true
     call layer_forward
-    pop rdx ; just for poping the value 1 
+    add rsp, 8   ; just for poping the value 1 
 
     lea rdi, [rel h2]
     lea rsi, [rel W3]
@@ -90,7 +90,7 @@ _start:
     mov r9, 64
     push 0                     ; use_relu = false
     call layer_forward
-    pop rdx ; just for poping the value 0
+    add rsp, 8   ; just for poping the value 0
 
     ; Softmax
     lea rdi, [rel o]
@@ -169,6 +169,44 @@ _start:
     call load_mnist_label
     add rsp, 8              ; just to pop the pushed 1 from stack
 
+    ; Forward pass for TEST data
+    lea rdi, [rel img_double]
+    lea rsi, [rel W1]
+    lea rdx, [rel b1]
+    lea r8,  [rel h1]
+    mov rcx, 128
+    mov r9, 784
+    push 1                     ; use_relu = true
+    call layer_forward
+    add rsp, 8   ; just for poping the value 1 
+
+    lea rdi, [rel h1]
+    lea rsi, [rel W2]
+    lea rdx, [rel b2]
+    lea r8,  [rel h2]
+    mov rcx, 64
+    mov r9, 128
+    push 1                     ; use_relu = true
+    call layer_forward
+    add rsp, 8   ; just for poping the value 1 
+
+    lea rdi, [rel h2]
+    lea rsi, [rel W3]
+    lea rdx, [rel b3]
+    lea r8,  [rel o]
+    mov rcx, 10
+    mov r9, 64
+    push 0                     ; use_relu = false
+    call layer_forward
+    add rsp, 8   ; just for poping the value 0
+
+    ; Softmax
+    lea rdi, [rel o]
+    lea rsi, [rel o]
+    mov rcx, 10
+    call softmax
+    
+    
     pop rbx
     cmp rbx, TOTAL_SAMPLES
     jne .test_sample_loop
