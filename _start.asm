@@ -8,13 +8,14 @@ extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_z1, grad_h1, grad_z2, grad_h2, grad_o
 extern accumulate_gradients, update_weights, clear_gradients
 extern print_loss
+extern argmax
 
 
 BATCH_SIZE equ 64
 EPOCHS equ 10
-TOTAL_SAMPLES equ 60000
+TOTAL_SAMPLES equ 3200
 BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
-TOTAL_SAMPLES_TEST equ 10000
+TOTAL_SAMPLES_TEST equ 100
 
 section .bss
 losses resq BATCH_SIZE      ; store per-sample losses
@@ -153,9 +154,11 @@ _start:
 
     ; test the model on the test data
     xor rbx, rbx ; sample index for test
+    xor r12, r12 ; correct counter
 
 .test_sample_loop:    
     mov rsi, rbx
+    push r12
     push rbx
 
     push 1
@@ -205,11 +208,33 @@ _start:
     lea rsi, [rel o]
     mov rcx, 10
     call softmax
-    
-    
+
+    ; get predicted label (argmax of o)
+    lea rdi, [rel o]
+    mov rcx, 10
+    call argmax           ; predicted label would be stored in rax
+
+    ; compare with true label
     pop rbx
+    pop r12
+    movzx rdx, byte [rel label]  ; rdx = true label
+    cmp rax, rdx
+    jne .no_increment
+    inc r12                      ; correct++
+.no_increment:
+    
     cmp rbx, TOTAL_SAMPLES
     jne .test_sample_loop
+
+
+    ; compute accuracy
+    cvtsi2sd xmm0, r12
+    mov rax, TOTAL_SAMPLES_TEST
+    cvtsi2sd xmm1, rax
+    divsd xmm0, xmm1
+
+    ; print accuracy
+    call print_loss  ; this just print the value in xmm0, i reuse it for printing accuracy :)
 
     ; exit
     mov rax, 60
