@@ -7,7 +7,7 @@ extern z1, h1, z2, h2, o
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_z1, grad_h1, grad_z2, grad_h2, grad_o
 extern accumulate_gradients, update_weights, clear_gradients
-extern print_loss
+extern print_loss, print_epoch
 extern argmax
 
 
@@ -26,6 +26,9 @@ _start:
 
 .epoch_loop:
     push r15
+    mov r14, EPOCHS + 1
+    sub r14, r15
+    call print_epoch
     xor r14, r14            ; batch index = 0
     
 .batch_loop:

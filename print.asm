@@ -1,11 +1,13 @@
 section .data
     newline db 10
+    epoch_text db "Epoch: ", 0
 
 section .bss
     buffer resb 32
+    epoch_buffer resb 16
 
 section .text
-global print_loss
+global print_loss, print_epoch
 
 print_loss:
     push rbp
@@ -36,6 +38,44 @@ print_loss:
     syscall
     
     add rsp, 8
+    pop rbp
+    ret
+    
+
+; Print epoch number with text
+; r14 = epoch number (integer)
+print_epoch:
+    push rbp
+    mov rbp, rsp
+    push r14                ; save epoch number
+    
+    ; Print "Epoch: " text
+    mov rax, 1              ; sys_write
+    mov rdi, 1              ; stdout
+    mov rsi, epoch_text     ; "Epoch: "
+    mov rdx, 7              ; length of "Epoch: "
+    syscall
+    
+    ; Convert epoch number to string
+    pop rax                 ; restore epoch number
+    mov rdi, epoch_buffer
+    call int_to_string
+    
+    ; Print epoch number
+    mov rsi, epoch_buffer
+    call string_length      ; returns length in rax
+    mov rdx, rax            ; length in rdx
+    mov rax, 1              ; sys_write
+    mov rdi, 1              ; stdout  
+    syscall
+    
+    ; Print newline
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, newline
+    mov rdx, 1
+    syscall
+    
     pop rbp
     ret
 
@@ -109,7 +149,7 @@ int_to_string:
     mov rcx, 0
 .digit_loop:
     xor rdx, rdx
-    div rbx
+    div rbx         ; divides rax by 10, quotient in rax, remainder in rdx
     add dl, '0'
     push rdx
     inc rcx
@@ -124,6 +164,7 @@ int_to_string:
     loop .pop_loop
     
 .done:
+    mov byte [rdi], 0    ; <-- NULL-terminate the string
     pop rdx
     pop rcx
     pop rbx
