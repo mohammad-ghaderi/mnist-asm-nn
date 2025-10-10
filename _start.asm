@@ -11,11 +11,11 @@ extern print_loss, print_epoch, print_accuracy
 extern argmax
 
 
-BATCH_SIZE equ 64
+BATCH_SIZE equ 64           
 EPOCHS equ 10
-TOTAL_SAMPLES equ 3200
+TOTAL_SAMPLES equ (60000 / BATCH_SIZE) * BATCH_SIZE
 BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
-TOTAL_SAMPLES_TEST equ 100
+TOTAL_SAMPLES_TEST equ 10000
 
 section .bss
 losses resq BATCH_SIZE      ; store per-sample losses
