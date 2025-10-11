@@ -87,7 +87,6 @@ load_mnist_label:
     mov rdi, label_test_file  ; address of test label filename
 .rest_load_label:
 
-    mov rdi, label_file
     mov rsi, 0
     syscall
     mov rbx, rax

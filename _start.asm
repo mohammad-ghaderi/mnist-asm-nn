@@ -170,6 +170,7 @@ _start:
 
     pop rbx
     push rbx
+    mov rsi, rbx
 
     push 1
     call load_mnist_label
