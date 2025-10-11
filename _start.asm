@@ -228,7 +228,7 @@ _start:
 .no_increment:
     
     inc rbx
-    cmp rbx, TOTAL_SAMPLES
+    cmp rbx, TOTAL_SAMPLES_TEST
     jne .test_sample_loop
 
 
