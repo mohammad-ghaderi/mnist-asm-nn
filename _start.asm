@@ -11,7 +11,7 @@ extern print_loss, print_epoch, print_accuracy
 extern argmax
 
 
-BATCH_SIZE equ 64           
+BATCH_SIZE equ 32           
 EPOCHS equ 10
 TOTAL_SAMPLES equ (60000 / BATCH_SIZE) * BATCH_SIZE
 BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches

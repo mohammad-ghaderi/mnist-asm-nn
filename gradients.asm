@@ -4,7 +4,7 @@ extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 
 section .data
 learning_rate dq 0.01
-batch_size_inv dq 0.015625  ; 1/64
+batch_size_inv dq 0.03125  ; 1/64
 
 section .text
 

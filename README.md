@@ -108,5 +108,5 @@ Run the neural network:
 ### Checking values
 ![checking value](docs/checking.png)
 
-### Accuracy 76%
+### Accuracy 86%
 ![accuracy](docs/accuracy.png)
