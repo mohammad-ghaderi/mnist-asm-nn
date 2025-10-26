@@ -1,5 +1,5 @@
 global accumulate_gradients, relu_backward, softmax_cross_entropy_backward
-extern img_double, label, h1, h2, o, z1, z2
+extern img_float, label, h1, h2, o, z1, z2
 extern W1, W2, W3
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 extern grad_h1, grad_h2, grad_o
@@ -93,7 +93,7 @@ accumulate_gradients:
 
     ; dW1 += grad_z1^T * img
     lea rdi, [rel grad_h1]    ; gradient (grad_z1)
-    lea rsi, [rel img_double] ; input image (size 784)
+    lea rsi, [rel img_float] ; input image (size 784)
     lea rdx, [rel dW1]        ; gradient for W1
     mov r9, 128               ; size of grad_z1
     mov rcx, 784              ; size of img

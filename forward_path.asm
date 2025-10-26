@@ -18,18 +18,18 @@ layer_forward:
     
     xor r10, r10              ; neuron index
 .layer_loop:
-    ; compute offset = r10 * r9 * 8
+    ; compute offset = r10 * r9 * 4
     mov rax, r10
     imul rax, r9
-    shl rax, 3
+    shl rax, 2
     lea r11, [rsi + rax]      ; W_row = W + offset
 
-    ; bias pointer = b + r10*8
+    ; bias pointer = b + r10*4
     mov rax, r10
-    shl rax, 3
+    shl rax, 2
     lea r12, [rdx + rax]
 
-    ; output pointer = out + r10*8
+    ; output pointer = out + r10*4
     lea r13, [r8 + rax]
 
     push rsi

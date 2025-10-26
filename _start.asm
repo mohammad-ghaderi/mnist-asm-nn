@@ -1,7 +1,7 @@
 global _start
 extern load_mnist_image, load_mnist_label
 extern layer_forward, softmax, neg_log
-extern img, label, img_double
+extern img, label, img_float
 extern W1, b1, W2, b2, W3, b3
 extern z1, h1, z2, h2, o
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
@@ -66,7 +66,7 @@ _start:
     add rsp, 8              ; just to pop the pushed 0 from stack
 
     ; Forward pass
-    lea rdi, [rel img_double]
+    lea rdi, [rel img_float]
     lea rsi, [rel W1]
     lea rdx, [rel b1]
     lea r8,  [rel h1]
@@ -177,7 +177,7 @@ _start:
     add rsp, 8              ; just to pop the pushed 1 from stack
 
     ; Forward pass for TEST data
-    lea rdi, [rel img_double]
+    lea rdi, [rel img_float]
     lea rsi, [rel W1]
     lea rdx, [rel b1]
     lea r8,  [rel h1]
