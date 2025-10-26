@@ -2,8 +2,11 @@ global load_mnist_image
 global load_mnist_label
 
 extern img
-extern img_double
+extern img_float
 extern label
+
+section .rodata
+    const_255: dd 255.0
 
 section .text
 
@@ -53,11 +56,11 @@ load_mnist_image:
     mov rdi, rbx
     syscall
 
-    ; Convert to doubles
+    ; Convert to float
     lea rdi, [rel img]        ; source (bytes)
-    lea rsi, [rel img_double] ; destination (doubles)
+    lea rsi, [rel img_float] ; destination (float)
     mov rcx, 784
-    call convert_img_to_double
+    call convert_img_to_float
 
     pop r13
     pop r12
@@ -115,25 +118,24 @@ load_mnist_label:
     pop r15
     ret
 
-convert_img_to_double:
-    ; Converts unsigned byte image to doubles
+convert_img_to_float:
+    ; Converts unsigned byte image to floats
     ; rdi = source byte array
-    ; rsi = destination double array  
+    ; rsi = destination float array  
     ; rcx = number of elements (784)
     push rbp
     mov rbp, rsp
     xor rax, rax
 
     ; Load 255.0 constant for division
-    mov r9, __float64__(255.0)
-    movq xmm1, r9
+    movss xmm1, [rel const_255]
     
     
 .convert_loop:
     movzx r8, byte [rdi + rax]    ; load unsigned byte
-    cvtsi2sd xmm0, r8             ; convert to double
-    divsd xmm0, xmm1              ; divide by 255.0 to normalize
-    movsd [rsi + rax*8], xmm0     ; store as double
+    cvtsi2ss xmm0, r8             ; convert to float32
+    divss xmm0, xmm1               ; divide by 255.0 to normalize
+    movss [rsi + rax*4], xmm0      ; store as float32 (4 bytes)
     inc rax
     cmp rax, rcx
     jl .convert_loop
