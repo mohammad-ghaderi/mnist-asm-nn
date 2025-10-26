@@ -12,33 +12,68 @@ section .text
 outer_product_add:
     push rbp
     mov rbp, rsp
+    push r12                ; callee-saved used below
+    push r13
+    push r14
+
     xor r8, r8              ; i index for vector A
-.outer_loop:
+.outer_loop:    
+    cmp r8, r9
+    jae .outer_end
+
+    vbroadcastss zmm0, dword [rdi + r8*4]   ; zmm0 = A[i]
+
+    mov r12, r8
+    imul r12, rcx
+    shl r12, 2
+    add r12, rdx          ; r12 = &C[i,0]
+
     xor r10, r10            ; j index for vector B
-    movsd xmm1, [rdi + r8*8] ; A[i]
+
+    cmp     rcx, 16
+    jb      .tail_loop
     
 .inner_loop:
-    movsd xmm0, [rsi + r10*8] ; B[j]
-    mulsd xmm0, xmm1          ; A[i] * B[j]
-    
-    ; Calculate matrix index: i * rcx + j
-    mov rax, r8
-    imul rax, rcx
-    add rax, r10
-    
-    ; C[i,j] += A[i] * B[j]
-    addsd xmm0, [rdx + rax*8]
-    movsd [rdx + rax*8], xmm0
-    
-    inc r10
-    cmp r10, rcx
-    jl .inner_loop
-    
-    inc r8
-    cmp r8, r9
-    jl .outer_loop
-    
-    pop rbp
+    vmovups zmm1, [rsi + r10*4]        ; load B[j..j+15]
+    vmovups zmm2, [r12  + r10*4]       ; load C[i, j..J+15]
+
+    ; zmm2 += zmm0 * zmm1  (C += A[i] * B[j..j+15])
+    vfmadd231ps zmm2, zmm0, zmm1
+    vmovups [r12 + r10*4], zmm2        ; updated C row
+
+    add r10, 16
+    mov r11, rcx
+    sub r11, r10
+    cmp r11, 16
+    jae .inner_loop
+
+.tail_loop:
+    movss   xmm0, dword [rdi + r8*4]   ; A[i]
+
+.tail_inner_loop:
+    cmp     r10, rcx
+    jge     .next_outer_i
+
+    movss   xmm1, dword [rsi + r10*4]  ; B[j]
+    mulss   xmm1, xmm0                 ; A[i] * B[j]
+
+    ; load C[i,j], add and store
+    movss   xmm2, dword [r12 + r10*4]
+    addss   xmm2, xmm1
+    movss   dword [r12 + r10*4], xmm2
+
+    inc     r10
+    jmp     .tail_inner_loop
+
+.next_outer_i:
+    inc     r8
+    jmp     .outer_loop
+
+.outer_end:
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
     ret
 
 ; matrix_vector_multiply
