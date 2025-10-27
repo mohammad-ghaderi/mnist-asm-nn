@@ -6,8 +6,7 @@ extern grad_h1, grad_h2, grad_o
 extern outer_product_add, matrix_vector_multiply
 
 section .data
-one dq 1.0
-batch_size_inv dq 0.015625  ; 1/64
+one dd 1.0
 
 section .text
 
@@ -37,9 +36,9 @@ accumulate_gradients:
     mov rcx, 10
     xor rax, rax
 .accumulate_db3_loop:
-    movsd xmm0, [grad_o + rax*8]
-    addsd xmm0, [dbias3 + rax*8]
-    movsd [dbias3 + rax*8], xmm0
+    movss xmm0, [grad_o + rax*4]
+    addss xmm0, [dbias3 + rax*4]
+    movss [dbias3 + rax*4], xmm0
     inc rax
     cmp rax, rcx
     jl .accumulate_db3_loop
@@ -70,9 +69,9 @@ accumulate_gradients:
     mov rcx, 64
     xor rax, rax
 .accumulate_db2_loop:
-    movsd xmm0, [grad_h2 + rax*8]  ; grad_z2
-    addsd xmm0, [dbias2 + rax*8]
-    movsd [dbias2 + rax*8], xmm0
+    movss xmm0, [grad_h2 + rax*4]  ; grad_z2
+    addss xmm0, [dbias2 + rax*4]
+    movss [dbias2 + rax*4], xmm0
     inc rax
     cmp rax, rcx
     jl .accumulate_db2_loop
@@ -92,20 +91,20 @@ accumulate_gradients:
     call relu_backward         ; result in grad_h1 (now it's grad_z1)
 
     ; dW1 += grad_z1^T * img
-    lea rdi, [rel grad_h1]    ; gradient (grad_z1)
+    lea rdi, [rel gr            ad_h1]    ; gradient (grad_z1)
     lea rsi, [rel img_float] ; input image (size 784)
     lea rdx, [rel dW1]        ; gradient for W1
-    mov r9, 128               ; size of grad_z1
-    mov rcx, 784              ; size of img
+    mov rcx, 128               ; size of grad_z1
+    mov r9, 784              ; size of img
     call outer_product_add
 
     ; dbias1 += grad_z1
     mov rcx, 128
     xor rax, rax
 .accumulate_db1_loop:
-    movsd xmm0, [grad_h1 + rax*8]  ; grad_z1
-    addsd xmm0, [dbias1 + rax*8]
-    movsd [dbias1 + rax*8], xmm0
+    movss xmm0, [grad_h1 + rax*4]  ; grad_z1
+    addss xmm0, [dbias1 + rax*4]
+    movss [dbias1 + rax*4], xmm0
     inc rax
     cmp rax, rcx
     jl .accumulate_db1_loop
@@ -119,16 +118,16 @@ relu_backward:
     mov rbp, rsp
     xor rax, rax
 .relu_backward_loop:
-    movsd xmm0, [rdi + rax*8]  ; z[i]
-    xorpd xmm1, xmm1
-    comisd xmm0, xmm1
+    movss xmm0, [rdi + rax*4]  ; z[i]
+    xorps xmm1, xmm1
+    comiss xmm0, xmm1
     jbe .zero_grad
-    movsd xmm0, [rsi + rax*8]  ; gradient from above
+    movss xmm0, [rsi + rax*4]  ; gradient from above
     jmp .store_grad
 .zero_grad:
-    xorpd xmm0, xmm0
+    xorps xmm0, xmm0
 .store_grad:
-    movsd [rsi + rax*8], xmm0
+    movss [rsi + rax*4], xmm0
     inc rax
     cmp rax, rcx
     jl .relu_backward_loop
@@ -144,14 +143,14 @@ softmax_cross_entropy_backward:
     movzx rax, byte [rsi]      ; true label
     xor r8, r8
 .softmax_grad_loop:
-    movsd xmm0, [rdi + r8*8]   ; p_i
+    movss xmm0, [rdi + r8*4]   ; p_i
     cmp r8, rax
     jne .not_true_class
-    subsd xmm0, [rel one]
+    subss xmm0, [rel one]
     jmp .store_grad
 .not_true_class:
 .store_grad:
-    movsd [rdx + r8*8], xmm0
+    movss [rdx + r8*4], xmm0
     inc r8
     cmp r8, rcx
     jl .softmax_grad_loop
