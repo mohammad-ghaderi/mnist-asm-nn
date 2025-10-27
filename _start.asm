@@ -18,7 +18,7 @@ BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
 TOTAL_SAMPLES_TEST equ 10000
 
 section .bss
-losses resq BATCH_SIZE      ; store per-sample losses
+losses resd BATCH_SIZE      ; store per-sample losses
 
 section .text
 _start:
@@ -104,13 +104,15 @@ _start:
 
     ; Loss = -log(p[label])
     movzx rdi, byte [rel label]
-    movsd xmm0, [o + rdi*8]
+    movss xmm0, [o + rdi*4]
+    cvtss2sd xmm0, xmm0    ; float -> double
     call neg_log
+    cvtsd2ss xmm0, xmm0    ; double -> float
     
     pop r13
     pop rbx
 
-    movsd [losses + rbx*8], xmm0
+    movss [losses + rbx*4], xmm0
 
     call accumulate_gradients  ; gradients for this sample
 
@@ -125,16 +127,15 @@ _start:
     pxor xmm1, xmm1
     xor rbx, rbx
 .sum_loop:
-    addsd xmm1, [losses + rbx*8]
+    addss xmm1, [losses + rbx*4]
     inc rbx
     cmp rbx, BATCH_SIZE
     jl .sum_loop
 
     mov rax, BATCH_SIZE
-    cvtsi2sd xmm0, rax
-    divsd xmm1, xmm0           ; avg loss in xmm1
-    movapd xmm0, xmm1
-
+    cvtsi2ss xmm0, rax
+    divss xmm1, xmm0           ; avg loss in xmm1
+    cvtss2sd xmm0, xmm1           ; convert to double
     call print_loss
 
     ; update weights with averaged gradients
