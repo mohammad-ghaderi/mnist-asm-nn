@@ -234,12 +234,12 @@ _start:
 
 
     ; compute accuracy
-    cvtsi2sd xmm0, r12
+    cvtsi2ss xmm0, r12
     mov rax, TOTAL_SAMPLES_TEST
-    cvtsi2sd xmm1, rax
-    divsd xmm0, xmm1
+    cvtsi2ss xmm1, rax
+    divss xmm0, xmm1
 
-
+    cvtss2sd xmm0, xmm0 ; convert to double for print input
     call print_accuracy ; print the accuracy saved in xmm0
 
     ; exit
