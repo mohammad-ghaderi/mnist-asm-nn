@@ -52,7 +52,7 @@ layer_forward:
     call relu                 ; if 1, apply relu
     
 .skip_relu:
-    movsd [r13], xmm0
+    movss [r13], xmm0
 
     pop rcx
     pop rdx
