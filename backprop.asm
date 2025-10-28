@@ -91,7 +91,7 @@ accumulate_gradients:
     call relu_backward         ; result in grad_h1 (now it's grad_z1)
 
     ; dW1 += grad_z1^T * img
-    lea rdi, [rel gr            ad_h1]    ; gradient (grad_z1)
+    lea rdi, [rel grad_h1]    ; gradient (grad_z1)
     lea rsi, [rel img_float] ; input image (size 784)
     lea rdx, [rel dW1]        ; gradient for W1
     mov rcx, 128               ; size of grad_z1
