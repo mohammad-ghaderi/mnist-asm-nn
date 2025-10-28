@@ -3,8 +3,8 @@ extern W1, b1, W2, b2, W3, b3
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
 
 section .data
-learning_rate dq 0.01
-batch_size_inv dq 0.03125  ; 1/32
+learning_rate dd 0.01
+batch_size_inv dd 0.03125  ; 1/32
 
 section .text
 
