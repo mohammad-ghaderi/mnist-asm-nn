@@ -61,8 +61,8 @@ accumulate_gradients:
     lea rdi, [rel grad_h2]    ; gradient (grad_z2) (size 64)
     lea rsi, [rel h1]         ; input to layer 2 (size 128)
     lea rdx, [rel dW2]        ; gradient for W2
-    mov rcx, 64               ; output size
-    mov r9, 128               ; input size
+    mov rcx, 128               ; input size
+    mov r9, 64               ; output size
     call outer_product_add
 
     ; dbias2 += grad_z2
@@ -94,8 +94,8 @@ accumulate_gradients:
     lea rdi, [rel grad_h1]    ; gradient (grad_z1)
     lea rsi, [rel img_float] ; input image (size 784)
     lea rdx, [rel dW1]        ; gradient for W1
-    mov rcx, 128               ; size of grad_z1
-    mov r9, 784              ; size of img
+    mov r9, 128               ; size of grad_z1
+    mov rcx, 784              ; size of img
     call outer_product_add
 
     ; dbias1 += grad_z1
