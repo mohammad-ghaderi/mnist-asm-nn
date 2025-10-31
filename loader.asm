@@ -6,7 +6,7 @@ extern img_float
 extern label
 
 section .rodata
-    const_255: dd 255.0
+    const_255: dq 255.0
 
 section .text
 
@@ -128,13 +128,14 @@ convert_img_to_float:
     xor rax, rax
 
     ; Load 255.0 constant for division
-    movss xmm1, [rel const_255]
+    movsd xmm1, [rel const_255]
     
     
 .convert_loop:
     movzx r8, byte [rdi + rax]    ; load unsigned byte
-    cvtsi2ss xmm0, r8             ; convert to float32
-    divss xmm0, xmm1               ; divide by 255.0 to normalize
+    cvtsi2sd xmm0, r8             ; convert to float32
+    divsd xmm0, xmm1               ; divide by 255.0 to normalize
+    cvtsd2ss xmm0, xmm0            ; convert double -> float32
     movss [rsi + rax*4], xmm0      ; store as float32 (4 bytes)
     inc rax
     cmp rax, rcx
