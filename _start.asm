@@ -1,5 +1,5 @@
 global _start
-extern load_mnist_image, load_mnist_label
+extern load_mnist_image, load_mnist_label, fetch_data, fetch_labels
 extern layer_forward, softmax, neg_log
 extern img, label, img_float
 extern W1, b1, W2, b2, W3, b3
@@ -23,6 +23,10 @@ losses resd BATCH_SIZE      ; store per-sample losses
 section .text
 _start:
     mov r15, EPOCHS         ; number of epochs
+    push 0                  ; 0 for train data 1 for test data
+    call fetch_data
+    call fetch_labels
+    add rsp, 8              ; just to pop the pushed 0 from stack
 
 .epoch_loop:
     push r15
@@ -47,11 +51,8 @@ _start:
 
     ; Calculate actual sample index: base_index + sample_index
     mov rax, r13
-    add rax, rbx
-    mov rsi, rax            ; global sample index
-    push 0                  ; 0 for train data 1 for test data
+    add rax, rbx            ; global sample index
     call load_mnist_image
-    add rsp, 8              ; just to pop the pushed 0 from stack
 
     pop r13
     pop rbx
@@ -59,11 +60,8 @@ _start:
     push r13
 
     mov rax, r13
-    add rax, rbx
-    mov rsi, rax            ; global sample index  
-    push 0
+    add rax, rbx            ; global sample index  
     call load_mnist_label
-    add rsp, 8              ; just to pop the pushed 0 from stack
 
     ; Forward pass
     lea rdi, [rel img_float]
@@ -156,6 +154,11 @@ _start:
     ; =========================
     ;; TEST
 
+    push 1
+    call fetch_data
+    call fetch_labels
+    add rsp, 8    
+
     ; test the model on the test data
     xor rbx, rbx ; sample index for test
     xor r12, r12 ; correct counter
@@ -165,17 +168,15 @@ _start:
     push r12
     push rbx
 
-    push 1
+    mov rax, rbx
     call load_mnist_image
-    add rsp, 8              ; just to pop the pushed 1 from stack
 
     pop rbx
     push rbx
     mov rsi, rbx
 
-    push 1
+    mov rax, rbx
     call load_mnist_label
-    add rsp, 8              ; just to pop the pushed 1 from stack
 
     ; Forward pass for TEST data
     lea rdi, [rel img_float]
