@@ -1,14 +1,18 @@
 global load_mnist_image
 global load_mnist_label
+global fetch_data, fetch_labels
 
 extern img
-extern img_double
+extern img_float
 extern label
+extern labels
+
+section .rodata
+    const_255: dq 255.0
 
 section .text
 
-; rsi = image index (0-based)
-load_mnist_image:
+fetch_data:
     push r15                  ; save r15 to use for train-test flag
     mov r15, [rsp+16]         ; get train-test flag from stack (offset +8 because we pushed r15)
 
@@ -19,54 +23,48 @@ load_mnist_image:
 
     mov r12, rsi
 
-    mov rax, 2        ; open images file
     cmp r15, 1
     je .load_test_data
     ; load train data
     mov rdi, img_file ; address of train filename
+    mov rcx, 60000
     jmp .rest_load_data
 .load_test_data:
     mov rdi, img_test_file  ; address of test filename
+    mov rcx, 10000
 .rest_load_data:
 
+    mov rax, 2        ; open images file
     mov rsi, 0        ; O_RDONLY
     syscall       
     mov rbx, rax      ; fd
     ; skip header
     mov rax, 8        ; lseek
     mov rdi, rbx
-    mov rsi, r12      ; image index
-    imul rsi, 784     ; image offset
-    add rsi, 16       ; skip 16-byte header
+    mov rsi, 16       ; skip 16-byte header
     mov rdx, 0
     syscall
 
-    ; read 784 bytes
+    ; read all
     mov rax, 0  
     mov rdi, rbx
     lea rsi, [rel img]
     mov rdx, 784
+    imul rdx, rcx     ; rdx = 784 * (60000 or 10000)
     syscall
 
     ; close
     mov rax, 3       
     mov rdi, rbx
     syscall
-
-    ; Convert to doubles
-    lea rdi, [rel img]        ; source (bytes)
-    lea rsi, [rel img_double] ; destination (doubles)
-    mov rcx, 784
-    call convert_img_to_double
-
+    
     pop r13
     pop r12
     pop rbp
     pop r15
     ret
 
-; rsi = label index (0-based)
-load_mnist_label:
+fetch_labels:
     push r15                  ; save r15 to use for train-test flag
     mov r15, [rsp+16]         ; get train-test flag from stack (offset +8 because we pushed r15)
 
@@ -77,16 +75,18 @@ load_mnist_label:
     mov r12, rsi
     
     ; open labels file
-    mov rax, 2
     cmp r15, 1
     je .load_test_label
     ; load train label
     mov rdi, label_file ; address of train label filename
+    mov rcx, 60000
     jmp .rest_load_label
 .load_test_label:
     mov rdi, label_test_file  ; address of test label filename
+    mov rcx, 10000
 .rest_load_label:
 
+    mov rax, 2
     mov rsi, 0
     syscall
     mov rbx, rax
@@ -94,16 +94,15 @@ load_mnist_label:
     ; Calculate file position: index + 8 (header)
     mov rax, 8        ; lseek
     mov rdi, rbx
-    mov rsi, r12      ; use saved index
-    add rsi, 8        ; skip 8-byte header
+    mov rsi, 8        ; skip 8-byte header
     mov rdx, 0
     syscall
 
-    ; read 1 byte
+    ; read all
     mov rax, 0
     mov rdi, rbx
-    lea rsi, [rel label]
-    mov rdx, 1
+    lea rsi, [rel labels]
+    mov rdx, rcx
     syscall
 
     ; close
@@ -115,25 +114,46 @@ load_mnist_label:
     pop r15
     ret
 
-convert_img_to_double:
-    ; Converts unsigned byte image to doubles
+
+
+; rax = image index (0-based)
+load_mnist_image:
+    imul rax, rax, 784
+    lea r8, [rel img]
+    add r8, rax          ; r8 = img + rax
+    mov rdi, r8          ; rdi = source pointer
+    lea rsi, [rel img_float] ; destination (float)
+    mov rcx, 784
+    call convert_img_to_float
+    ret
+
+; rax = label index (0-based)
+load_mnist_label:
+    lea r8, [rel labels]
+    add r8, rax
+    mov al, byte [r8]
+    mov [rel label], al
+    ret
+
+convert_img_to_float:
+    ; Converts unsigned byte image to floats
     ; rdi = source byte array
-    ; rsi = destination double array  
+    ; rsi = destination float array  
     ; rcx = number of elements (784)
     push rbp
     mov rbp, rsp
     xor rax, rax
 
     ; Load 255.0 constant for division
-    mov r9, __float64__(255.0)
-    movq xmm1, r9
+    movsd xmm1, [rel const_255]
     
     
 .convert_loop:
     movzx r8, byte [rdi + rax]    ; load unsigned byte
-    cvtsi2sd xmm0, r8             ; convert to double
-    divsd xmm0, xmm1              ; divide by 255.0 to normalize
-    movsd [rsi + rax*8], xmm0     ; store as double
+    cvtsi2sd xmm0, r8             ; convert to float32
+    divsd xmm0, xmm1               ; divide by 255.0 to normalize
+    cvtsd2ss xmm0, xmm0            ; convert double -> float32
+    movss [rsi + rax*4], xmm0      ; store as float32 (4 bytes)
     inc rax
     cmp rax, rcx
     jl .convert_loop

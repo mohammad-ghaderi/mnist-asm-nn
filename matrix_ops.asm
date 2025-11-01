@@ -12,33 +12,68 @@ section .text
 outer_product_add:
     push rbp
     mov rbp, rsp
+    push r12                ; callee-saved used below
+    push r13
+    push r14
+
     xor r8, r8              ; i index for vector A
-.outer_loop:
+.outer_loop:    
+    cmp r8, r9
+    jae .outer_end
+
+    vbroadcastss zmm0, dword [rdi + r8*4]   ; zmm0 = A[i]
+
+    mov r12, r8
+    imul r12, rcx
+    shl r12, 2
+    add r12, rdx          ; r12 = &C[i,0]
+
     xor r10, r10            ; j index for vector B
-    movsd xmm1, [rdi + r8*8] ; A[i]
+
+    cmp     rcx, 16
+    jb      .tail_loop
     
 .inner_loop:
-    movsd xmm0, [rsi + r10*8] ; B[j]
-    mulsd xmm0, xmm1          ; A[i] * B[j]
-    
-    ; Calculate matrix index: i * rcx + j
-    mov rax, r8
-    imul rax, rcx
-    add rax, r10
-    
-    ; C[i,j] += A[i] * B[j]
-    addsd xmm0, [rdx + rax*8]
-    movsd [rdx + rax*8], xmm0
-    
-    inc r10
-    cmp r10, rcx
-    jl .inner_loop
-    
-    inc r8
-    cmp r8, r9
-    jl .outer_loop
-    
-    pop rbp
+    vmovups zmm1, [rsi + r10*4]        ; load B[j..j+15]
+    vmovups zmm2, [r12  + r10*4]       ; load C[i, j..J+15]
+
+    ; zmm2 += zmm0 * zmm1  (C += A[i] * B[j..j+15])
+    vfmadd231ps zmm2, zmm0, zmm1
+    vmovups [r12 + r10*4], zmm2        ; updated C row
+
+    add r10, 16
+    mov r11, rcx
+    sub r11, r10
+    cmp r11, 16
+    jae .inner_loop
+
+.tail_loop:
+    movss   xmm0, dword [rdi + r8*4]   ; A[i]
+
+.tail_inner_loop:
+    cmp     r10, rcx
+    jge     .next_outer_i
+
+    movss   xmm1, dword [rsi + r10*4]  ; B[j]
+    mulss   xmm1, xmm0                 ; A[i] * B[j]
+
+    ; load C[i,j], add and store
+    movss   xmm2, dword [r12 + r10*4]
+    addss   xmm2, xmm1
+    movss   dword [r12 + r10*4], xmm2
+
+    inc     r10
+    jmp     .tail_inner_loop
+
+.next_outer_i:
+    inc     r8
+    jmp     .outer_loop
+
+.outer_end:
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbp
     ret
 
 ; matrix_vector_multiply
@@ -53,27 +88,87 @@ matrix_vector_multiply:
     mov rbp, rsp
     push r12
     push r13
+    push r14
     
     xor r8, r8              ; j index for output vector
 .outer_loop:
-    pxor xmm0, xmm0         ; accumulator for y[j]
+    cmp r8, r9
+    jae .outer_end
+
+    mov r11, r9
+    sub r11, r8
+    cmp r11, 16
+    jb .tail_loop
+
+    vxorps zmm0, zmm0, zmm0
     xor r10, r10            ; i index for input vector
 .inner_loop:
-    mov rax, r10            ; i
-    imul rax, r9            ; i * num_columns
-    add rax, r8             ; i * num_columns + j
-    movsd xmm1, [rsi + rax*8] ; W[i][j]
-    movsd xmm2, [rdi + r10*8] ; x[i]
-    mulsd xmm1, xmm2          ; x[i] * W[i][j]
-    addsd xmm0, xmm1          ; accumulate
-    inc r10
     cmp r10, rcx
-    jl .inner_loop
-    movsd [rdx + r8*8], xmm0
-    inc r8
-    cmp r8, r9
-    jl .outer_loop
-    
+    jae .store_inner
+
+    vbroadcastss zmm1, dword [rdi + r10*4]    ; zmm1 = x[i]
+
+    ; address of W[i, j] = rsi + (i * r9 + j) * 4
+    mov r12, r10
+    imul r12, r9
+    shl r12, 2
+    add r12, rsi            ; r12 = &W[i, 0]
+    vmovups zmm2, [r12 + r8*4]  ; w[i, j...j+15]
+
+    vfmadd231ps zmm0, zmm1, zmm2 ; zmm0 += x[i] * Wrow_block
+
+    inc r10
+    jmp .inner_loop
+
+.store_inner:
+    vmovups [rdx + r8*4], zmm0     ; storing 16 results into y
+
+    add r8, 16
+    jmp .outer_loop
+
+.tail_loop:
+    ; j = r8 .. r9-1
+    mov r13, r8          ; j = current column
+.tail_loop_col:
+    cmp r13, r9
+    jge .tail_end
+
+    ; accumulator in xmm0
+    pxor xmm0, xmm0
+
+    xor r10, r10         ; i = 0
+
+    .tail_inner:
+    cmp r10, rcx
+    jge .tail_store
+
+    ; load x[i]
+    movss xmm1, dword [rdi + r10*4]
+    ; load W[i, j]
+    mov r12, r10
+    imul r12, r9
+    add r12, r13
+    shl r12, 2
+    add r12, rsi
+    movss xmm2, dword [r12]    ; W[i,j]
+
+    mulss xmm1, xmm2
+    addss xmm0, xmm1
+
+    inc r10
+    jmp .tail_inner
+
+.tail_store:
+    movss dword [rdx + r13*4], xmm0
+
+    inc r13
+    jmp .tail_loop_col
+
+.tail_end:
+    jmp .outer_end
+
+.outer_end:
+    pop r14
     pop r13
     pop r12
     pop rbp

@@ -1,6 +1,6 @@
-# Neural Network in Assembly — MNIST from Scratch
+# Neural Network in Assembly — MNIST from Scratch — 7x faster
 
-**Author:** Me and Copilot
+**Author:** Me and (Copilot)
 
 ## Overview
 This project implements a simple neural network entirely in **x86 assembly language** to recognize handwritten digits from the **MNIST dataset**. The goal was to understand how neural networks work at the lowest level — from memory layout and arithmetic operations to training logic — without relying on high-level libraries or frameworks. It runs in a lightweight **Debian Slim** environment via Docker for easy setup.
@@ -9,6 +9,11 @@ This project implements a simple neural network entirely in **x86 assembly langu
 ## Why I Built This
 Sometimes, ***we think we truly understand something, until we try to build it from scratch.***
 When ***theory meets practice, every small detail becomes a challenge***.
+
+Not only is this a pure assembly implementation, but I also optimized it for performance:
+- Using **AVX-512 ZMM registers**, I can compute **16 float32 operations in parallel**, adding SIMD acceleration to the neural network computations.
+- As a result, this assembly implementation is roughly **7× faster than a pure Python implementation using NumPy** (which itself relies on C libraries).
+
 
 I decided to write this project in pure assembly language to push my limits and see what really happens behind high-level neural network frameworks. It was a deep dive into how each operation — from matrix multiplication to gradient updates — actually works at the CPU level.
 
@@ -30,18 +35,24 @@ Throughout this project, I faced many challenges in both implementation and unde
 ### Training Details
 
 - **Epochs:** 10  
-- **Batch size:** 64  
+- **Batch size:** 32  
 - **Training samples:** 60,000  
 - **Test samples:** 10,000  
 - **Learning rate:** 0.01  
 
 
-##  Challenges
-+ I first wanted to make this for Windows, but Windows API calls in assembly were too complicated to debug. So I switched to Linux where I could use GDB in the terminal, which was hard but fun to learn
+## Challenges
++ I first wanted to make this for Windows, but Windows API calls in assembly were too complicated to debug. So I switched to Linux where I could use GDB in the terminal, which was hard but fun to learn.
 
 + For the softmax and loss functions, I needed exp() and log(). Instead of writing them myself, I used the math library by linking with -lc -lm.
 
 + To help debug, I wrote the same neural network in Python to compare outputs and find where my assembly was wrong.
+
++ I first implemented all operations using 64-bit doubles, but then switched to 32-bit floats to reduce memory usage and improve performance. This required changing memory layouts, instructions, and data handling throughout the code.
+
++ I added parallelism using AVX-512 ZMM registers, allowing 16 float32 calculations to be performed simultaneously in dot products and matrix operations, which sped up computation significantly.
+
++ I discovered that reading each MNIST image individually from disk was a major bottleneck. I solved this by loading the entire dataset into RAM at once, which drastically reduced file I/O overhead.
 
 + I tried to make my functions flexible and reusable across different parts of the neural network.
 
@@ -54,10 +65,10 @@ After each batch, `gradient.asm` updates the weights using these gradients and a
 
 The `build.sh` script assembles all NASM files into object files, links them with the math libraries, and produces the final executable.
 
-
-
 ## Build & Run with Docker
 This project can be built and run inside a Docker container with NASM and build tools installed. Follow these steps:
+
+
 
 #### Build the Docker image
 ```bash
@@ -96,6 +107,14 @@ Run the neural network:
 ./mnist
 ```
 
+#### Production Build
+
+This project includes a `build_prod.sh` script for creating an optimized production executable:
+
+```bash
+./build_prod.sh
+```
+
 ### Debugging Environment
 ![debug](docs/debug.png)
 
@@ -108,5 +127,5 @@ Run the neural network:
 ### Checking values
 ![checking value](docs/checking.png)
 
-### Accuracy 86%
+### Accuracy 94.9%
 ![accuracy](docs/accuracy.png)

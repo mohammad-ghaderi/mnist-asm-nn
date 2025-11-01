@@ -2,3 +2,7 @@ obj
 *.o
 *.py
 *.txt
+mnist
+mnist_prod
+test.sh
+testing

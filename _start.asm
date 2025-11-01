@@ -1,7 +1,7 @@
 global _start
-extern load_mnist_image, load_mnist_label
+extern load_mnist_image, load_mnist_label, fetch_data, fetch_labels
 extern layer_forward, softmax, neg_log
-extern img, label, img_double
+extern img, label, img_float
 extern W1, b1, W2, b2, W3, b3
 extern z1, h1, z2, h2, o
 extern dW1, dbias1, dW2, dbias2, dW3, dbias3
@@ -18,11 +18,15 @@ BATCHES_PER_EPOCH equ TOTAL_SAMPLES / BATCH_SIZE  ; 937 batches
 TOTAL_SAMPLES_TEST equ 10000
 
 section .bss
-losses resq BATCH_SIZE      ; store per-sample losses
+losses resd BATCH_SIZE      ; store per-sample losses
 
 section .text
 _start:
     mov r15, EPOCHS         ; number of epochs
+    push 0                  ; 0 for train data 1 for test data
+    call fetch_data
+    call fetch_labels
+    add rsp, 8              ; just to pop the pushed 0 from stack
 
 .epoch_loop:
     push r15
@@ -47,11 +51,8 @@ _start:
 
     ; Calculate actual sample index: base_index + sample_index
     mov rax, r13
-    add rax, rbx
-    mov rsi, rax            ; global sample index
-    push 0                  ; 0 for train data 1 for test data
+    add rax, rbx            ; global sample index
     call load_mnist_image
-    add rsp, 8              ; just to pop the pushed 0 from stack
 
     pop r13
     pop rbx
@@ -59,14 +60,11 @@ _start:
     push r13
 
     mov rax, r13
-    add rax, rbx
-    mov rsi, rax            ; global sample index  
-    push 0
+    add rax, rbx            ; global sample index  
     call load_mnist_label
-    add rsp, 8              ; just to pop the pushed 0 from stack
 
     ; Forward pass
-    lea rdi, [rel img_double]
+    lea rdi, [rel img_float]
     lea rsi, [rel W1]
     lea rdx, [rel b1]
     lea r8,  [rel h1]
@@ -104,13 +102,15 @@ _start:
 
     ; Loss = -log(p[label])
     movzx rdi, byte [rel label]
-    movsd xmm0, [o + rdi*8]
+    movss xmm0, [o + rdi*4]
+    cvtss2sd xmm0, xmm0    ; float -> double
     call neg_log
+    cvtsd2ss xmm0, xmm0    ; double -> float
     
     pop r13
     pop rbx
 
-    movsd [losses + rbx*8], xmm0
+    movss [losses + rbx*4], xmm0
 
     call accumulate_gradients  ; gradients for this sample
 
@@ -125,16 +125,15 @@ _start:
     pxor xmm1, xmm1
     xor rbx, rbx
 .sum_loop:
-    addsd xmm1, [losses + rbx*8]
+    addss xmm1, [losses + rbx*4]
     inc rbx
     cmp rbx, BATCH_SIZE
     jl .sum_loop
 
     mov rax, BATCH_SIZE
-    cvtsi2sd xmm0, rax
-    divsd xmm1, xmm0           ; avg loss in xmm1
-    movapd xmm0, xmm1
-
+    cvtsi2ss xmm0, rax
+    divss xmm1, xmm0           ; avg loss in xmm1
+    cvtss2sd xmm0, xmm1           ; convert to double
     call print_loss
 
     ; update weights with averaged gradients
@@ -155,6 +154,11 @@ _start:
     ; =========================
     ;; TEST
 
+    push 1
+    call fetch_data
+    call fetch_labels
+    add rsp, 8    
+
     ; test the model on the test data
     xor rbx, rbx ; sample index for test
     xor r12, r12 ; correct counter
@@ -164,20 +168,18 @@ _start:
     push r12
     push rbx
 
-    push 1
+    mov rax, rbx
     call load_mnist_image
-    add rsp, 8              ; just to pop the pushed 1 from stack
 
     pop rbx
     push rbx
     mov rsi, rbx
 
-    push 1
+    mov rax, rbx
     call load_mnist_label
-    add rsp, 8              ; just to pop the pushed 1 from stack
 
     ; Forward pass for TEST data
-    lea rdi, [rel img_double]
+    lea rdi, [rel img_float]
     lea rsi, [rel W1]
     lea rdx, [rel b1]
     lea r8,  [rel h1]
@@ -233,12 +235,12 @@ _start:
 
 
     ; compute accuracy
-    cvtsi2sd xmm0, r12
+    cvtsi2ss xmm0, r12
     mov rax, TOTAL_SAMPLES_TEST
-    cvtsi2sd xmm1, rax
-    divsd xmm0, xmm1
+    cvtsi2ss xmm1, rax
+    divss xmm0, xmm1
 
-
+    cvtss2sd xmm0, xmm0 ; convert to double for print input
     call print_accuracy ; print the accuracy saved in xmm0
 
     ; exit
